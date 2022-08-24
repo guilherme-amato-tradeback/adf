@@ -1,0 +1,20 @@
+{
+	"name": "Sftp1",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "Sftp",
+		"typeProperties": {
+			"host": "BRRNHMLPRC01.GRUPOLTM.LOCAL",
+			"port": 22,
+			"skipHostKeyValidation": true,
+			"authenticationType": "Basic",
+			"userName": "sftp.loyaltyengine",
+			"encryptedCredential": "eyJDcmVkZW50aWFsSWQiOiJhNjdlZWVjYy0xYWEwLTRjODktOGE5OS1kYjA5NWQ3ZDQ5NjUiLCJWZXJzaW9uIjoiMi4wIiwiQ2xhc3NUeXBlIjoiTWljcm9zb2Z0LkRhdGFQcm94eS5Db3JlLkludGVyU2VydmljZURhdGFDb250cmFjdC5DcmVkZW50aWFsU1UwNkNZMTQifQ=="
+		},
+		"connectVia": {
+			"referenceName": "BRAZULTMGWDFV2",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}
