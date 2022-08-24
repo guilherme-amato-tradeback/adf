@@ -1,0 +1,9 @@
+{
+	"name": "adf-loyaltyengine-orchestrator-hml",
+	"location": "eastus2",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "657ad9b4-5cde-4559-9faf-259f2a2ffced",
+		"tenantId": "16904e7d-c4aa-4f87-b946-bd34d60a4237"
+	}
+}

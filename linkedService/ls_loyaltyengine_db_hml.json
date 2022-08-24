@@ -1,0 +1,21 @@
+{
+	"name": "ls_loyaltyengine_db_hml",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"description": "Linked service para o ambiente do databricks de HML (Cluster cl-loyaltyengine-hml).",
+		"annotations": [],
+		"type": "AzureDatabricks",
+		"typeProperties": {
+			"domain": "https://adb-1201743383509968.8.azuredatabricks.net/",
+			"accessToken": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "ls_loyaltyengine_kv_hml",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "kv-token-databricks-hml"
+			},
+			"existingClusterId": "0307-161633-87ltspg6"
+		}
+	}
+}

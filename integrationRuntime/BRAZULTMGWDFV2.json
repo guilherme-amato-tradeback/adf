@@ -1,0 +1,13 @@
+{
+	"name": "BRAZULTMGWDFV2",
+	"properties": {
+		"type": "SelfHosted",
+		"description": "Servidor de HML de Integration RunTiome",
+		"typeProperties": {
+			"linkedInfo": {
+				"resourceId": "/subscriptions/c2f3374a-1f37-472e-88e1-78a28d68a2fe/resourcegroups/LTMGWDFV2/providers/Microsoft.DataFactory/factories/LtmGWDFV2/integrationruntimes/IntegrationRuntimeBRAZULTMGWDFV2",
+				"authorizationType": "Rbac"
+			}
+		}
+	}
+}

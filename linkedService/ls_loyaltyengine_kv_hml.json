@@ -1,0 +1,12 @@
+{
+	"name": "ls_loyaltyengine_kv_hml",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"description": "Linked service para o ambiente do key vault de HML.",
+		"annotations": [],
+		"type": "AzureKeyVault",
+		"typeProperties": {
+			"baseUrl": "https://kv-loyaltyengine-hml-us2.vault.azure.net/"
+		}
+	}
+}
