@@ -1,0 +1,20 @@
+{
+	"name": "ls_loyaltyengine_sftp_hml",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "Sftp",
+		"typeProperties": {
+			"host": "BRRNHMLPRC01.GRUPOLTM.LOCAL",
+			"port": 22,
+			"skipHostKeyValidation": true,
+			"authenticationType": "Basic",
+			"userName": "sftp.loyaltyengine",
+			"encryptedCredential": "eyJDcmVkZW50aWFsSWQiOiI5ZWYyY2M2NS1iNmY1LTQ0YTktODgwMC1iMzRmYjJmYzQ0MmQiLCJWZXJzaW9uIjoiMi4wIiwiQ2xhc3NUeXBlIjoiTWljcm9zb2Z0LkRhdGFQcm94eS5Db3JlLkludGVyU2VydmljZURhdGFDb250cmFjdC5DcmVkZW50aWFsU1UwNkNZMTQifQ=="
+		},
+		"connectVia": {
+			"referenceName": "BRAZULTMGWDFV2",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}
