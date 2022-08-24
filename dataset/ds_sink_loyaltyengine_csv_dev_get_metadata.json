@@ -1,0 +1,86 @@
+{
+	"name": "ds_sink_loyaltyengine_csv_dev_get_metadata",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_loyaltyengine_bl_hml",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"DestinationRoot": {
+				"type": "string"
+			},
+			"DestinationPath": {
+				"type": "string"
+			},
+			"Compression_Type": {
+				"type": "string"
+			},
+			"Column_Delimiter": {
+				"type": "string"
+			},
+			"Encoding": {
+				"type": "string"
+			},
+			"Row_Delimiter": {
+				"type": "string"
+			},
+			"Escape_Character": {
+				"type": "string"
+			},
+			"Quote_Character": {
+				"type": "string"
+			},
+			"First_Row_Header": {
+				"type": "bool"
+			}
+		},
+		"folder": {
+			"name": "FTP"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"folderPath": {
+					"value": "@dataset().DestinationPath",
+					"type": "Expression"
+				},
+				"container": {
+					"value": "@dataset().DestinationRoot",
+					"type": "Expression"
+				}
+			},
+			"columnDelimiter": {
+				"value": "@dataset().Column_Delimiter",
+				"type": "Expression"
+			},
+			"rowDelimiter": {
+				"value": "@dataset().Row_Delimiter",
+				"type": "Expression"
+			},
+			"compressionCodec": {
+				"value": "@dataset().Compression_Type",
+				"type": "Expression"
+			},
+			"compressionLevel": "Optimal",
+			"encodingName": {
+				"value": "@dataset().Encoding",
+				"type": "Expression"
+			},
+			"escapeChar": {
+				"value": "@dataset().Escape_Character",
+				"type": "Expression"
+			},
+			"firstRowAsHeader": {
+				"value": "@dataset().First_Row_Header",
+				"type": "Expression"
+			},
+			"quoteChar": {
+				"value": "@dataset().Quote_Character",
+				"type": "Expression"
+			}
+		},
+		"schema": []
+	}
+}

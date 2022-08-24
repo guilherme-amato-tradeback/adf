@@ -1,0 +1,79 @@
+{
+	"name": "template_ds_source_folder",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_loyaltyengine_sftp_hml",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"FilePath": {
+				"type": "string"
+			},
+			"CompressionType": {
+				"type": "string"
+			},
+			"ColumnDelimiter": {
+				"type": "string"
+			},
+			"RowDelimiter": {
+				"type": "string"
+			},
+			"Encoding": {
+				"type": "string"
+			},
+			"EscapeCharacter": {
+				"type": "string"
+			},
+			"QuoteCharacter": {
+				"type": "string"
+			},
+			"FirstRowasHeader": {
+				"type": "bool"
+			}
+		},
+		"folder": {
+			"name": "FTP"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "SftpLocation",
+				"folderPath": {
+					"value": "@dataset().FilePath",
+					"type": "Expression"
+				}
+			},
+			"columnDelimiter": {
+				"value": "@dataset().ColumnDelimiter",
+				"type": "Expression"
+			},
+			"rowDelimiter": {
+				"value": "@dataset().RowDelimiter",
+				"type": "Expression"
+			},
+			"compressionCodec": {
+				"value": "@dataset().CompressionType",
+				"type": "Expression"
+			},
+			"compressionLevel": "Optimal",
+			"encodingName": {
+				"value": "@dataset().Encoding",
+				"type": "Expression"
+			},
+			"escapeChar": {
+				"value": "@dataset().EscapeCharacter",
+				"type": "Expression"
+			},
+			"firstRowAsHeader": {
+				"value": "@dataset().FirstRowasHeader",
+				"type": "Expression"
+			},
+			"quoteChar": {
+				"value": "@dataset().QuoteCharacter",
+				"type": "Expression"
+			}
+		},
+		"schema": []
+	}
+}

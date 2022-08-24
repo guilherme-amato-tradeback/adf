@@ -1,0 +1,36 @@
+{
+	"name": "Error_Pipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "Pipeline Error",
+				"type": "Fail",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"message": {
+						"value": "@pipeline().parameters.Error_Message",
+						"type": "Expression"
+					},
+					"errorCode": {
+						"value": "@pipeline().parameters.Error_Code",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"Error_Code": {
+				"type": "string"
+			},
+			"Error_Message": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "Base_Model"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-12-28T15:46:01Z"
+	}
+}
