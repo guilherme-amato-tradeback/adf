@@ -1,0 +1,42 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"value": "adf-loyaltyengine-orchestrator-hml"
+		},
+		"ls_loyaltyengine_bl_hml_connectionString": {
+			"value": ""
+		},
+		"ls_loyaltyengine_dl_hml_accountKey": {
+			"value": ""
+		},
+		"ls_loyaltyengine_sftp_hml_password": {
+			"value": ""
+		},
+		"ls_loyaltyengine_db_hml_properties_typeProperties_existingClusterId": {
+			"value": "0307-161633-87ltspg6"
+		},
+		"ls_loyaltyengine_dl_hml_properties_typeProperties_url": {
+			"value": "https://stloyaltyenginedatahml.dfs.core.windows.net/"
+		},
+		"ls_loyaltyengine_kv_hml_properties_typeProperties_baseUrl": {
+			"value": "https://kv-loyaltyengine-hml-us2.vault.azure.net/"
+		},
+		"ls_loyaltyengine_sftp_hml_properties_typeProperties_host": {
+			"value": "BRRNHMLPRC01.GRUPOLTM.LOCAL"
+		},
+		"ls_loyaltyengine_sftp_hml_properties_typeProperties_userName": {
+			"value": "sftp.loyaltyengine"
+		},
+		"BRAZULTMGWDFV2_properties_typeProperties_linkedInfo_resourceId": {
+			"value": "/subscriptions/c2f3374a-1f37-472e-88e1-78a28d68a2fe/resourcegroups/LTMGWDFV2/providers/Microsoft.DataFactory/factories/LtmGWDFV2/integrationruntimes/IntegrationRuntimeBRAZULTMGWDFV2"
+		},
+		"containerUri": {
+			"value": ""
+		},
+		"containerSasToken": {
+			"value": ""
+		}
+	}
+}

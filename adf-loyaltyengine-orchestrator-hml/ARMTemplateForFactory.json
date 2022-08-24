@@ -1,0 +1,2620 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "adf-loyaltyengine-orchestrator-hml"
+		},
+		"ls_loyaltyengine_bl_hml_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'ls_loyaltyengine_bl_hml'"
+		},
+		"ls_loyaltyengine_dl_hml_accountKey": {
+			"type": "secureString",
+			"metadata": "Secure string for 'accountKey' of 'ls_loyaltyengine_dl_hml'"
+		},
+		"ls_loyaltyengine_sftp_hml_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'ls_loyaltyengine_sftp_hml'"
+		},
+		"ls_loyaltyengine_db_hml_properties_typeProperties_existingClusterId": {
+			"type": "string",
+			"defaultValue": "0307-161633-87ltspg6"
+		},
+		"ls_loyaltyengine_dl_hml_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://stloyaltyenginedatahml.dfs.core.windows.net/"
+		},
+		"ls_loyaltyengine_kv_hml_properties_typeProperties_baseUrl": {
+			"type": "string",
+			"defaultValue": "https://kv-loyaltyengine-hml-us2.vault.azure.net/"
+		},
+		"ls_loyaltyengine_sftp_hml_properties_typeProperties_host": {
+			"type": "string",
+			"defaultValue": "BRRNHMLPRC01.GRUPOLTM.LOCAL"
+		},
+		"ls_loyaltyengine_sftp_hml_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "sftp.loyaltyengine"
+		},
+		"BRAZULTMGWDFV2_properties_typeProperties_linkedInfo_resourceId": {
+			"type": "string",
+			"defaultValue": "/subscriptions/c2f3374a-1f37-472e-88e1-78a28d68a2fe/resourcegroups/LTMGWDFV2/providers/Microsoft.DataFactory/factories/LtmGWDFV2/integrationruntimes/IntegrationRuntimeBRAZULTMGWDFV2"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/Copy Files From SFTP_copy1')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Get_Folder_Metadata",
+						"description": "Atividade para ler a pasta \"processar\" no servidor SFTP.",
+						"type": "GetMetadata",
+						"dependsOn": [
+							{
+								"activity": "Set Destination_Lake",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "template_ds_source_folder",
+								"type": "DatasetReference",
+								"parameters": {
+									"FilePath": {
+										"value": "@pipeline().parameters.Source_Path",
+										"type": "Expression"
+									},
+									"CompressionType": {
+										"value": "@pipeline().parameters.Compression_Type",
+										"type": "Expression"
+									},
+									"ColumnDelimiter": {
+										"value": "@pipeline().parameters.Column_Delimiter",
+										"type": "Expression"
+									},
+									"RowDelimiter": {
+										"value": "@pipeline().parameters.Row_Delimiter",
+										"type": "Expression"
+									},
+									"Encoding": {
+										"value": "@pipeline().parameters.Encoding",
+										"type": "Expression"
+									},
+									"EscapeCharacter": {
+										"value": "@pipeline().parameters.Escape_Character",
+										"type": "Expression"
+									},
+									"QuoteCharacter": {
+										"value": "@pipeline().parameters.Quote_Character",
+										"type": "Expression"
+									},
+									"FirstRowasHeader": {
+										"value": "@pipeline().parameters.First_Row_Header",
+										"type": "Expression"
+									}
+								}
+							},
+							"fieldList": [
+								"childItems",
+								"itemName"
+							],
+							"storeSettings": {
+								"type": "SftpReadSettings",
+								"recursive": true,
+								"enablePartitionDiscovery": false
+							},
+							"formatSettings": {
+								"type": "DelimitedTextReadSettings"
+							}
+						}
+					},
+					{
+						"name": "Verify_Child_Items",
+						"description": "Enriquece a variável child items com a informação se existe algum item filho na pasta procurada.",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "Get_Folder_Metadata",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "Verify_Child_Items",
+							"value": {
+								"value": "@string(activity('Get_Folder_Metadata').output.childItems)",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "Main Error ADF - Get Folder Metadata",
+						"type": "DatabricksNotebook",
+						"dependsOn": [
+							{
+								"activity": "Get_Folder_Metadata",
+								"dependencyConditions": [
+									"Failed"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"notebookPath": "/root/functions/notification/error/nb-error-adf",
+							"baseParameters": {
+								"pipeline_name": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								},
+								"run_id": {
+									"value": "@pipeline().RunId",
+									"type": "Expression"
+								}
+							}
+						},
+						"linkedServiceName": {
+							"referenceName": "ls_loyaltyengine_db_hml",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "Verify Empty Folder",
+						"description": "Caso a variável não retorne o valor esperado, o processo é parado pois não existe arquivo na pasta.",
+						"type": "IfCondition",
+						"dependsOn": [
+							{
+								"activity": "Verify_Child_Items",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"expression": {
+								"value": "@empty(replace(replace(variables('Verify_Child_Items'), '[', ''), ']', ''))",
+								"type": "Expression"
+							},
+							"ifTrueActivities": [
+								{
+									"name": "Error - Empty Folder",
+									"type": "ExecutePipeline",
+									"dependsOn": [],
+									"userProperties": [
+										{
+											"name": "Error_Code",
+											"value": "001"
+										},
+										{
+											"name": "Error_Message",
+											"value": "Folder is empty"
+										}
+									],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "Error_Pipeline",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"Error_Code": "001",
+											"Error_Message": "Folder is empty"
+										}
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "Main Error ADF - Verify Child Items",
+						"type": "DatabricksNotebook",
+						"dependsOn": [
+							{
+								"activity": "Verify_Child_Items",
+								"dependencyConditions": [
+									"Failed"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"notebookPath": "/root/functions/notification/error/nb-error-adf",
+							"baseParameters": {
+								"pipeline_name": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								},
+								"run_id": {
+									"value": "@pipeline().RunId",
+									"type": "Expression"
+								}
+							}
+						},
+						"linkedServiceName": {
+							"referenceName": "ls_loyaltyengine_db_hml",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "Loop",
+						"description": "Looping para validação do nome do arquivo.",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "Verify Empty Folder",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('Get_Folder_Metadata').output.childitems",
+								"type": "Expression"
+							},
+							"isSequential": true,
+							"activities": [
+								{
+									"name": "Get_File_Extension",
+									"description": "Seleciona o nome do arquivo para a validação",
+									"type": "GetMetadata",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataset": {
+											"referenceName": "template_ds_source_file",
+											"type": "DatasetReference",
+											"parameters": {
+												"Filename": {
+													"value": "@item().name",
+													"type": "Expression"
+												},
+												"Filepath": {
+													"value": "@pipeline().parameters.Source_Path",
+													"type": "Expression"
+												},
+												"Compression_Type": {
+													"value": "@pipeline().parameters.Compression_Type",
+													"type": "Expression"
+												},
+												"Column_Delimiter": {
+													"value": "@pipeline().parameters.Column_Delimiter",
+													"type": "Expression"
+												},
+												"Encoding": {
+													"value": "@pipeline().parameters.Encoding",
+													"type": "Expression"
+												},
+												"Row_Delimiter": {
+													"value": "@pipeline().parameters.Row_Delimiter",
+													"type": "Expression"
+												},
+												"Escape_Character": {
+													"value": "@pipeline().parameters.Escape_Character",
+													"type": "Expression"
+												},
+												"Quote_Character": {
+													"value": "@pipeline().parameters.Quote_Character",
+													"type": "Expression"
+												},
+												"First_Row_Header": {
+													"value": "@pipeline().parameters.First_Row_Header",
+													"type": "Expression"
+												}
+											}
+										},
+										"fieldList": [
+											"itemName"
+										],
+										"storeSettings": {
+											"type": "SftpReadSettings",
+											"recursive": true,
+											"enablePartitionDiscovery": false
+										},
+										"formatSettings": {
+											"type": "DelimitedTextReadSettings"
+										}
+									}
+								},
+								{
+									"name": "Check_Extension",
+									"description": "Faz a verificação da extensão, caso seja verdadeira, passa para a próxima parte, caso contrário retorna o Erro 001.",
+									"type": "IfCondition",
+									"dependsOn": [
+										{
+											"activity": "Get_File_Extension",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"expression": {
+											"value": "@contains(activity('Get_File_Extension').output.itemName, pipeline().parameters.File_Extension)",
+											"type": "Expression"
+										},
+										"ifFalseActivities": [
+											{
+												"name": "Error 002 - Move to Error",
+												"type": "Copy",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "7.00:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"source": {
+														"type": "DelimitedTextSource",
+														"storeSettings": {
+															"type": "SftpReadSettings",
+															"recursive": false,
+															"enablePartitionDiscovery": false,
+															"disableChunking": true
+														},
+														"formatSettings": {
+															"type": "DelimitedTextReadSettings"
+														}
+													},
+													"sink": {
+														"type": "DelimitedTextSink",
+														"storeSettings": {
+															"type": "SftpWriteSettings",
+															"operationTimeout": "01:00:00",
+															"useTempFileRename": true
+														},
+														"formatSettings": {
+															"type": "DelimitedTextWriteSettings",
+															"quoteAllText": true,
+															"fileExtension": ".txt"
+														}
+													},
+													"enableStaging": false,
+													"translator": {
+														"type": "TabularTranslator",
+														"typeConversion": true,
+														"typeConversionSettings": {
+															"allowDataTruncation": true,
+															"treatBooleanAsNumber": false
+														}
+													}
+												},
+												"inputs": [
+													{
+														"referenceName": "template_ds_source_file",
+														"type": "DatasetReference",
+														"parameters": {
+															"Filename": {
+																"value": "@item().name",
+																"type": "Expression"
+															},
+															"Filepath": {
+																"value": "@pipeline().parameters.Source_Path",
+																"type": "Expression"
+															},
+															"Compression_Type": {
+																"value": "@pipeline().parameters.Compression_Type",
+																"type": "Expression"
+															},
+															"Column_Delimiter": {
+																"value": "@pipeline().parameters.Column_Delimiter",
+																"type": "Expression"
+															},
+															"Encoding": {
+																"value": "@pipeline().parameters.Encoding",
+																"type": "Expression"
+															},
+															"Row_Delimiter": {
+																"value": "@pipeline().parameters.Row_Delimiter",
+																"type": "Expression"
+															},
+															"Escape_Character": {
+																"value": "@pipeline().parameters.Escape_Character",
+																"type": "Expression"
+															},
+															"Quote_Character": {
+																"value": "@pipeline().parameters.Quote_Character",
+																"type": "Expression"
+															},
+															"First_Row_Header": {
+																"value": "@pipeline().parameters.First_Row_Header",
+																"type": "Expression"
+															}
+														}
+													}
+												],
+												"outputs": [
+													{
+														"referenceName": "template_ds_source_file",
+														"type": "DatasetReference",
+														"parameters": {
+															"Filename": {
+																"value": "@item().name",
+																"type": "Expression"
+															},
+															"Filepath": {
+																"value": "@pipeline().parameters.Error_Source_Path",
+																"type": "Expression"
+															},
+															"Compression_Type": {
+																"value": "@pipeline().parameters.Compression_Type",
+																"type": "Expression"
+															},
+															"Column_Delimiter": {
+																"value": "@pipeline().parameters.Column_Delimiter",
+																"type": "Expression"
+															},
+															"Encoding": {
+																"value": "@pipeline().parameters.Encoding",
+																"type": "Expression"
+															},
+															"Row_Delimiter": {
+																"value": "@pipeline().parameters.Row_Delimiter",
+																"type": "Expression"
+															},
+															"Escape_Character": {
+																"value": "@pipeline().parameters.Escape_Character",
+																"type": "Expression"
+															},
+															"Quote_Character": {
+																"value": "@pipeline().parameters.Quote_Character",
+																"type": "Expression"
+															},
+															"First_Row_Header": {
+																"value": "@pipeline().parameters.First_Row_Header",
+																"type": "Expression"
+															}
+														}
+													}
+												]
+											},
+											{
+												"name": "Error 002 - Delete in original folder",
+												"type": "Delete",
+												"dependsOn": [
+													{
+														"activity": "Error 002 - Move to Error",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
+												"policy": {
+													"timeout": "7.00:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"dataset": {
+														"referenceName": "template_ds_source_file",
+														"type": "DatasetReference",
+														"parameters": {
+															"Filename": {
+																"value": "@item().name",
+																"type": "Expression"
+															},
+															"Filepath": {
+																"value": "@pipeline().parameters.Source_Path",
+																"type": "Expression"
+															},
+															"Compression_Type": {
+																"value": "@pipeline().parameters.Compression_Type",
+																"type": "Expression"
+															},
+															"Column_Delimiter": {
+																"value": "@pipeline().parameters.Column_Delimiter",
+																"type": "Expression"
+															},
+															"Encoding": {
+																"value": "@pipeline().parameters.Encoding",
+																"type": "Expression"
+															},
+															"Row_Delimiter": {
+																"value": "@pipeline().parameters.Row_Delimiter",
+																"type": "Expression"
+															},
+															"Escape_Character": {
+																"value": "@pipeline().parameters.Escape_Character",
+																"type": "Expression"
+															},
+															"Quote_Character": {
+																"value": "@pipeline().parameters.Quote_Character",
+																"type": "Expression"
+															},
+															"First_Row_Header": {
+																"value": "@pipeline().parameters.First_Row_Header",
+																"type": "Expression"
+															}
+														}
+													},
+													"enableLogging": false,
+													"storeSettings": {
+														"type": "SftpReadSettings",
+														"recursive": false,
+														"enablePartitionDiscovery": false,
+														"disableChunking": false
+													}
+												}
+											},
+											{
+												"name": "Error - Wrong Extension",
+												"type": "ExecutePipeline",
+												"dependsOn": [
+													{
+														"activity": "Error 002 - Delete in original folder",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
+												"userProperties": [
+													{
+														"name": "Error_Code",
+														"value": "001"
+													},
+													{
+														"name": "Error_Message",
+														"value": "Folder is empty"
+													}
+												],
+												"typeProperties": {
+													"pipeline": {
+														"referenceName": "Error_Pipeline",
+														"type": "PipelineReference"
+													},
+													"waitOnCompletion": true,
+													"parameters": {
+														"Error_Code": "002",
+														"Error_Message": "Wrong Extension"
+													}
+												}
+											}
+										]
+									}
+								},
+								{
+									"name": "Check_Archive_Name",
+									"description": "Faz a verificação do nome, caso seja verdadeiro, passa para a próxima parte, caso contrário retorna o erro 002.",
+									"type": "IfCondition",
+									"dependsOn": [
+										{
+											"activity": "Check_Extension",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"expression": {
+											"value": "@contains(activity('Get_File_Extension').output.itemName, pipeline().parameters.File_Name)",
+											"type": "Expression"
+										},
+										"ifFalseActivities": [
+											{
+												"name": "Error - Filename out of pattern",
+												"type": "ExecutePipeline",
+												"dependsOn": [
+													{
+														"activity": "Error 003 - Delete in original folder",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
+												"userProperties": [
+													{
+														"name": "Error_Code",
+														"value": "001"
+													},
+													{
+														"name": "Error_Message",
+														"value": "Folder is empty"
+													}
+												],
+												"typeProperties": {
+													"pipeline": {
+														"referenceName": "Error_Pipeline",
+														"type": "PipelineReference"
+													},
+													"waitOnCompletion": true,
+													"parameters": {
+														"Error_Code": "003",
+														"Error_Message": "Filename out of pattern"
+													}
+												}
+											},
+											{
+												"name": "Error 003 - Move to Error",
+												"type": "Copy",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "7.00:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"source": {
+														"type": "DelimitedTextSource",
+														"storeSettings": {
+															"type": "SftpReadSettings",
+															"recursive": false,
+															"enablePartitionDiscovery": false,
+															"disableChunking": true
+														},
+														"formatSettings": {
+															"type": "DelimitedTextReadSettings"
+														}
+													},
+													"sink": {
+														"type": "DelimitedTextSink",
+														"storeSettings": {
+															"type": "SftpWriteSettings",
+															"operationTimeout": "01:00:00",
+															"useTempFileRename": true
+														},
+														"formatSettings": {
+															"type": "DelimitedTextWriteSettings",
+															"quoteAllText": true,
+															"fileExtension": ".txt"
+														}
+													},
+													"enableStaging": false,
+													"translator": {
+														"type": "TabularTranslator",
+														"typeConversion": true,
+														"typeConversionSettings": {
+															"allowDataTruncation": true,
+															"treatBooleanAsNumber": false
+														}
+													}
+												},
+												"inputs": [
+													{
+														"referenceName": "template_ds_source_file",
+														"type": "DatasetReference",
+														"parameters": {
+															"Filename": {
+																"value": "@item().name",
+																"type": "Expression"
+															},
+															"Filepath": {
+																"value": "@pipeline().parameters.Source_Path",
+																"type": "Expression"
+															},
+															"Compression_Type": {
+																"value": "@pipeline().parameters.Compression_Type",
+																"type": "Expression"
+															},
+															"Column_Delimiter": {
+																"value": "@pipeline().parameters.Column_Delimiter",
+																"type": "Expression"
+															},
+															"Encoding": {
+																"value": "@pipeline().parameters.Encoding",
+																"type": "Expression"
+															},
+															"Row_Delimiter": {
+																"value": "@pipeline().parameters.Row_Delimiter",
+																"type": "Expression"
+															},
+															"Escape_Character": {
+																"value": "@pipeline().parameters.Escape_Character",
+																"type": "Expression"
+															},
+															"Quote_Character": {
+																"value": "@pipeline().parameters.Quote_Character",
+																"type": "Expression"
+															},
+															"First_Row_Header": {
+																"value": "@pipeline().parameters.First_Row_Header",
+																"type": "Expression"
+															}
+														}
+													}
+												],
+												"outputs": [
+													{
+														"referenceName": "template_ds_source_file",
+														"type": "DatasetReference",
+														"parameters": {
+															"Filename": {
+																"value": "@item().name",
+																"type": "Expression"
+															},
+															"Filepath": {
+																"value": "@pipeline().parameters.Error_Source_Path",
+																"type": "Expression"
+															},
+															"Compression_Type": {
+																"value": "@pipeline().parameters.Compression_Type",
+																"type": "Expression"
+															},
+															"Column_Delimiter": {
+																"value": "@pipeline().parameters.Column_Delimiter",
+																"type": "Expression"
+															},
+															"Encoding": {
+																"value": "@pipeline().parameters.Encoding",
+																"type": "Expression"
+															},
+															"Row_Delimiter": {
+																"value": "@pipeline().parameters.Row_Delimiter",
+																"type": "Expression"
+															},
+															"Escape_Character": {
+																"value": "@pipeline().parameters.Escape_Character",
+																"type": "Expression"
+															},
+															"Quote_Character": {
+																"value": "@pipeline().parameters.Quote_Character",
+																"type": "Expression"
+															},
+															"First_Row_Header": {
+																"value": "@pipeline().parameters.First_Row_Header",
+																"type": "Expression"
+															}
+														}
+													}
+												]
+											},
+											{
+												"name": "Error 003 - Delete in original folder",
+												"type": "Delete",
+												"dependsOn": [
+													{
+														"activity": "Error 003 - Move to Error",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
+												"policy": {
+													"timeout": "7.00:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"dataset": {
+														"referenceName": "template_ds_source_file",
+														"type": "DatasetReference",
+														"parameters": {
+															"Filename": {
+																"value": "@item().name",
+																"type": "Expression"
+															},
+															"Filepath": {
+																"value": "@pipeline().parameters.Source_Path",
+																"type": "Expression"
+															},
+															"Compression_Type": {
+																"value": "@pipeline().parameters.Compression_Type",
+																"type": "Expression"
+															},
+															"Column_Delimiter": {
+																"value": "@pipeline().parameters.Column_Delimiter",
+																"type": "Expression"
+															},
+															"Encoding": {
+																"value": "@pipeline().parameters.Encoding",
+																"type": "Expression"
+															},
+															"Row_Delimiter": {
+																"value": "@pipeline().parameters.Row_Delimiter",
+																"type": "Expression"
+															},
+															"Escape_Character": {
+																"value": "@pipeline().parameters.Escape_Character",
+																"type": "Expression"
+															},
+															"Quote_Character": {
+																"value": "@pipeline().parameters.Quote_Character",
+																"type": "Expression"
+															},
+															"First_Row_Header": {
+																"value": "@pipeline().parameters.First_Row_Header",
+																"type": "Expression"
+															}
+														}
+													},
+													"enableLogging": false,
+													"storeSettings": {
+														"type": "SftpReadSettings",
+														"recursive": false,
+														"enablePartitionDiscovery": false,
+														"disableChunking": false
+													}
+												}
+											}
+										]
+									}
+								},
+								{
+									"name": "Returns if the archive exists",
+									"description": "Verifica se o retorno trás o nome do arquivo que está sendo validado.",
+									"type": "Filter",
+									"dependsOn": [
+										{
+											"activity": "Get_Storage_Metadata",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"items": {
+											"value": "@activity('Get_Storage_Metadata').output.childItems",
+											"type": "Expression"
+										},
+										"condition": {
+											"value": "@contains(string(activity('Get_Storage_Metadata').output.childItems), string(activity('Get_File_Extension').output.itemName))",
+											"type": "Expression"
+										}
+									}
+								},
+								{
+									"name": "Check_Archive_Exists",
+									"description": "Faz a verificação se o arquivo exista, caso seja verdadeiro, retorna o erro 003, caso contrário passa para a próxima parte.",
+									"type": "IfCondition",
+									"dependsOn": [
+										{
+											"activity": "Returns if the archive exists",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"expression": {
+											"value": "@greater(activity('Returns if the archive exists').output.FilteredItemsCount, 0)",
+											"type": "Expression"
+										},
+										"ifTrueActivities": [
+											{
+												"name": "Error - File already exists",
+												"type": "ExecutePipeline",
+												"dependsOn": [
+													{
+														"activity": "Error 004 - Delete in original folder",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
+												"userProperties": [
+													{
+														"name": "Error_Code",
+														"value": "001"
+													},
+													{
+														"name": "Error_Message",
+														"value": "Folder is empty"
+													}
+												],
+												"typeProperties": {
+													"pipeline": {
+														"referenceName": "Error_Pipeline",
+														"type": "PipelineReference"
+													},
+													"waitOnCompletion": true,
+													"parameters": {
+														"Error_Code": "004",
+														"Error_Message": "File Already Exists"
+													}
+												}
+											},
+											{
+												"name": "Error 004 - Move to Error",
+												"type": "Copy",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "7.00:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"source": {
+														"type": "DelimitedTextSource",
+														"storeSettings": {
+															"type": "SftpReadSettings",
+															"recursive": false,
+															"enablePartitionDiscovery": false,
+															"disableChunking": true
+														},
+														"formatSettings": {
+															"type": "DelimitedTextReadSettings"
+														}
+													},
+													"sink": {
+														"type": "DelimitedTextSink",
+														"storeSettings": {
+															"type": "SftpWriteSettings",
+															"operationTimeout": "01:00:00",
+															"useTempFileRename": true
+														},
+														"formatSettings": {
+															"type": "DelimitedTextWriteSettings",
+															"quoteAllText": true,
+															"fileExtension": ".txt"
+														}
+													},
+													"enableStaging": false,
+													"translator": {
+														"type": "TabularTranslator",
+														"typeConversion": true,
+														"typeConversionSettings": {
+															"allowDataTruncation": true,
+															"treatBooleanAsNumber": false
+														}
+													}
+												},
+												"inputs": [
+													{
+														"referenceName": "template_ds_source_file",
+														"type": "DatasetReference",
+														"parameters": {
+															"Filename": {
+																"value": "@item().name",
+																"type": "Expression"
+															},
+															"Filepath": {
+																"value": "@pipeline().parameters.Source_Path",
+																"type": "Expression"
+															},
+															"Compression_Type": {
+																"value": "@pipeline().parameters.Compression_Type",
+																"type": "Expression"
+															},
+															"Column_Delimiter": {
+																"value": "@pipeline().parameters.Column_Delimiter",
+																"type": "Expression"
+															},
+															"Encoding": {
+																"value": "@pipeline().parameters.Encoding",
+																"type": "Expression"
+															},
+															"Row_Delimiter": {
+																"value": "@pipeline().parameters.Row_Delimiter",
+																"type": "Expression"
+															},
+															"Escape_Character": {
+																"value": "@pipeline().parameters.Escape_Character",
+																"type": "Expression"
+															},
+															"Quote_Character": {
+																"value": "@pipeline().parameters.Quote_Character",
+																"type": "Expression"
+															},
+															"First_Row_Header": {
+																"value": "@pipeline().parameters.First_Row_Header",
+																"type": "Expression"
+															}
+														}
+													}
+												],
+												"outputs": [
+													{
+														"referenceName": "template_ds_source_file",
+														"type": "DatasetReference",
+														"parameters": {
+															"Filename": {
+																"value": "@item().name",
+																"type": "Expression"
+															},
+															"Filepath": {
+																"value": "@pipeline().parameters.Error_Source_Path",
+																"type": "Expression"
+															},
+															"Compression_Type": {
+																"value": "@pipeline().parameters.Compression_Type",
+																"type": "Expression"
+															},
+															"Column_Delimiter": {
+																"value": "@pipeline().parameters.Column_Delimiter",
+																"type": "Expression"
+															},
+															"Encoding": {
+																"value": "@pipeline().parameters.Encoding",
+																"type": "Expression"
+															},
+															"Row_Delimiter": {
+																"value": "@pipeline().parameters.Row_Delimiter",
+																"type": "Expression"
+															},
+															"Escape_Character": {
+																"value": "@pipeline().parameters.Escape_Character",
+																"type": "Expression"
+															},
+															"Quote_Character": {
+																"value": "@pipeline().parameters.Quote_Character",
+																"type": "Expression"
+															},
+															"First_Row_Header": {
+																"value": "@pipeline().parameters.First_Row_Header",
+																"type": "Expression"
+															}
+														}
+													}
+												]
+											},
+											{
+												"name": "Error 004 - Delete in original folder",
+												"type": "Delete",
+												"dependsOn": [
+													{
+														"activity": "Error 004 - Move to Error",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
+												"policy": {
+													"timeout": "7.00:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"dataset": {
+														"referenceName": "template_ds_source_file",
+														"type": "DatasetReference",
+														"parameters": {
+															"Filename": {
+																"value": "@item().name",
+																"type": "Expression"
+															},
+															"Filepath": {
+																"value": "@pipeline().parameters.Source_Path",
+																"type": "Expression"
+															},
+															"Compression_Type": {
+																"value": "@pipeline().parameters.Compression_Type",
+																"type": "Expression"
+															},
+															"Column_Delimiter": {
+																"value": "@pipeline().parameters.Column_Delimiter",
+																"type": "Expression"
+															},
+															"Encoding": {
+																"value": "@pipeline().parameters.Encoding",
+																"type": "Expression"
+															},
+															"Row_Delimiter": {
+																"value": "@pipeline().parameters.Row_Delimiter",
+																"type": "Expression"
+															},
+															"Escape_Character": {
+																"value": "@pipeline().parameters.Escape_Character",
+																"type": "Expression"
+															},
+															"Quote_Character": {
+																"value": "@pipeline().parameters.Quote_Character",
+																"type": "Expression"
+															},
+															"First_Row_Header": {
+																"value": "@pipeline().parameters.First_Row_Header",
+																"type": "Expression"
+															}
+														}
+													},
+													"enableLogging": false,
+													"storeSettings": {
+														"type": "SftpReadSettings",
+														"recursive": false,
+														"enablePartitionDiscovery": false,
+														"disableChunking": false
+													}
+												}
+											}
+										]
+									}
+								},
+								{
+									"name": "Get_Storage_Metadata",
+									"description": "Atividade para ler o storage e retornar todos os arquivos existentes na pasta raw.",
+									"type": "GetMetadata",
+									"dependsOn": [
+										{
+											"activity": "Create Folder Input - Data Lake",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataset": {
+											"referenceName": "ds_sink_loyaltyengine_csv_dev_get_metadata",
+											"type": "DatasetReference",
+											"parameters": {
+												"DestinationRoot": {
+													"value": "@pipeline().parameters.Destination_Root",
+													"type": "Expression"
+												},
+												"DestinationPath": {
+													"value": "@variables('File_Verification_Path')",
+													"type": "Expression"
+												},
+												"Compression_Type": {
+													"value": "@pipeline().parameters.Compression_Type",
+													"type": "Expression"
+												},
+												"Column_Delimiter": {
+													"value": "@pipeline().parameters.Column_Delimiter",
+													"type": "Expression"
+												},
+												"Encoding": {
+													"value": "@pipeline().parameters.Encoding",
+													"type": "Expression"
+												},
+												"Row_Delimiter": {
+													"value": "@pipeline().parameters.Row_Delimiter",
+													"type": "Expression"
+												},
+												"Escape_Character": {
+													"value": "@pipeline().parameters.Escape_Character",
+													"type": "Expression"
+												},
+												"Quote_Character": {
+													"value": "@pipeline().parameters.Quote_Character",
+													"type": "Expression"
+												},
+												"First_Row_Header": {
+													"value": "@pipeline().parameters.First_Row_Header",
+													"type": "Expression"
+												}
+											}
+										},
+										"fieldList": [
+											"childItems"
+										],
+										"storeSettings": {
+											"type": "AzureBlobStorageReadSettings",
+											"recursive": true,
+											"enablePartitionDiscovery": false
+										},
+										"formatSettings": {
+											"type": "DelimitedTextReadSettings"
+										}
+									}
+								},
+								{
+									"name": "Main Notebook",
+									"type": "DatabricksNotebook",
+									"dependsOn": [
+										{
+											"activity": "Copy file to raw",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"notebookPath": {
+											"value": "/root/modules/ingestion/nb-main",
+											"type": "Expression"
+										},
+										"baseParameters": {
+											"file_name": {
+												"value": "@item().name",
+												"type": "Expression"
+											},
+											"path": {
+												"value": "@variables('Destination_Lake')",
+												"type": "Expression"
+											},
+											"layout_id": {
+												"value": "@pipeline().parameters.Layout_ID",
+												"type": "Expression"
+											},
+											"client_name": {
+												"value": "@pipeline().parameters.Client_Name",
+												"type": "Expression"
+											},
+											"communication_channel": {
+												"value": "@pipeline().parameters.Communication_Channel",
+												"type": "Expression"
+											},
+											"process_name": {
+												"value": "@pipeline().parameters.File_Name",
+												"type": "Expression"
+											},
+											"process_type": {
+												"value": "@substring(pipeline().parameters.File_Extension,1,3)",
+												"type": "Expression"
+											}
+										}
+									},
+									"linkedServiceName": {
+										"referenceName": "ls_loyaltyengine_db_hml",
+										"type": "LinkedServiceReference"
+									}
+								},
+								{
+									"name": "Copy file to raw",
+									"description": "Insere o arquivo no storage",
+									"type": "Copy",
+									"dependsOn": [
+										{
+											"activity": "Check_Archive_Exists",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "DelimitedTextSource",
+											"storeSettings": {
+												"type": "SftpReadSettings",
+												"recursive": true,
+												"enablePartitionDiscovery": false,
+												"disableChunking": false
+											},
+											"formatSettings": {
+												"type": "DelimitedTextReadSettings"
+											}
+										},
+										"sink": {
+											"type": "DelimitedTextSink",
+											"storeSettings": {
+												"type": "AzureBlobStorageWriteSettings"
+											},
+											"formatSettings": {
+												"type": "DelimitedTextWriteSettings",
+												"quoteAllText": true,
+												"fileExtension": ".txt"
+											}
+										},
+										"enableStaging": false,
+										"translator": {
+											"type": "TabularTranslator",
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "template_ds_source_file",
+											"type": "DatasetReference",
+											"parameters": {
+												"Filename": {
+													"value": "@item().name",
+													"type": "Expression"
+												},
+												"Filepath": {
+													"value": "@pipeline().parameters.Source_Path",
+													"type": "Expression"
+												},
+												"Compression_Type": {
+													"value": "@pipeline().parameters.Compression_Type",
+													"type": "Expression"
+												},
+												"Column_Delimiter": {
+													"value": "@pipeline().parameters.Column_Delimiter",
+													"type": "Expression"
+												},
+												"Encoding": {
+													"value": "@pipeline().parameters.Encoding",
+													"type": "Expression"
+												},
+												"Row_Delimiter": {
+													"value": "@pipeline().parameters.Row_Delimiter",
+													"type": "Expression"
+												},
+												"Escape_Character": {
+													"value": "@pipeline().parameters.Escape_Character",
+													"type": "Expression"
+												},
+												"Quote_Character": {
+													"value": "@pipeline().parameters.Quote_Character",
+													"type": "Expression"
+												},
+												"First_Row_Header": {
+													"value": "@pipeline().parameters.First_Row_Header",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_sink_loyaltyengine_csv_dev",
+											"type": "DatasetReference",
+											"parameters": {
+												"FileName": {
+													"value": "@item().name",
+													"type": "Expression"
+												},
+												"DestinationRoot": {
+													"value": "@pipeline().parameters.Destination_Root",
+													"type": "Expression"
+												},
+												"DestinationPath": {
+													"value": "@variables('Destination_Path')",
+													"type": "Expression"
+												},
+												"Compression_Type": {
+													"value": "@pipeline().parameters.Compression_Type",
+													"type": "Expression"
+												},
+												"Column_Delimiter": {
+													"value": "@pipeline().parameters.Column_Delimiter",
+													"type": "Expression"
+												},
+												"Encoding": {
+													"value": "@pipeline().parameters.Encoding",
+													"type": "Expression"
+												},
+												"Row_Delimiter": {
+													"value": "@pipeline().parameters.Row_Delimiter",
+													"type": "Expression"
+												},
+												"Escape_Character": {
+													"value": "@pipeline().parameters.Escape_Character",
+													"type": "Expression"
+												},
+												"Quote_Character": {
+													"value": "@pipeline().parameters.Quote_Character",
+													"type": "Expression"
+												},
+												"First_Row_Header": {
+													"value": "@pipeline().parameters.First_Row_Header",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "Move to Sucess",
+									"type": "Copy",
+									"dependsOn": [
+										{
+											"activity": "Main Notebook",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "DelimitedTextSource",
+											"storeSettings": {
+												"type": "SftpReadSettings",
+												"recursive": false,
+												"enablePartitionDiscovery": false,
+												"disableChunking": true
+											},
+											"formatSettings": {
+												"type": "DelimitedTextReadSettings"
+											}
+										},
+										"sink": {
+											"type": "DelimitedTextSink",
+											"storeSettings": {
+												"type": "SftpWriteSettings",
+												"operationTimeout": "01:00:00",
+												"useTempFileRename": true
+											},
+											"formatSettings": {
+												"type": "DelimitedTextWriteSettings",
+												"quoteAllText": true,
+												"fileExtension": ".txt"
+											}
+										},
+										"enableStaging": false,
+										"translator": {
+											"type": "TabularTranslator",
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "template_ds_source_file",
+											"type": "DatasetReference",
+											"parameters": {
+												"Filename": {
+													"value": "@item().name",
+													"type": "Expression"
+												},
+												"Filepath": {
+													"value": "@pipeline().parameters.Source_Path",
+													"type": "Expression"
+												},
+												"Compression_Type": {
+													"value": "@pipeline().parameters.Compression_Type",
+													"type": "Expression"
+												},
+												"Column_Delimiter": {
+													"value": "@pipeline().parameters.Column_Delimiter",
+													"type": "Expression"
+												},
+												"Encoding": {
+													"value": "@pipeline().parameters.Encoding",
+													"type": "Expression"
+												},
+												"Row_Delimiter": {
+													"value": "@pipeline().parameters.Row_Delimiter",
+													"type": "Expression"
+												},
+												"Escape_Character": {
+													"value": "@pipeline().parameters.Escape_Character",
+													"type": "Expression"
+												},
+												"Quote_Character": {
+													"value": "@pipeline().parameters.Quote_Character",
+													"type": "Expression"
+												},
+												"First_Row_Header": {
+													"value": "@pipeline().parameters.First_Row_Header",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "template_ds_source_file",
+											"type": "DatasetReference",
+											"parameters": {
+												"Filename": {
+													"value": "@item().name",
+													"type": "Expression"
+												},
+												"Filepath": {
+													"value": "@pipeline().parameters.Sucess_Source_Path",
+													"type": "Expression"
+												},
+												"Compression_Type": {
+													"value": "@pipeline().parameters.Compression_Type",
+													"type": "Expression"
+												},
+												"Column_Delimiter": {
+													"value": "@pipeline().parameters.Column_Delimiter",
+													"type": "Expression"
+												},
+												"Encoding": {
+													"value": "@pipeline().parameters.Encoding",
+													"type": "Expression"
+												},
+												"Row_Delimiter": {
+													"value": "@pipeline().parameters.Row_Delimiter",
+													"type": "Expression"
+												},
+												"Escape_Character": {
+													"value": "@pipeline().parameters.Escape_Character",
+													"type": "Expression"
+												},
+												"Quote_Character": {
+													"value": "@pipeline().parameters.Quote_Character",
+													"type": "Expression"
+												},
+												"First_Row_Header": {
+													"value": "@pipeline().parameters.First_Row_Header",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "Sucess - Delete in original folder",
+									"type": "Delete",
+									"dependsOn": [
+										{
+											"activity": "Move to Processed",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataset": {
+											"referenceName": "template_ds_source_file",
+											"type": "DatasetReference",
+											"parameters": {
+												"Filename": {
+													"value": "@item().name",
+													"type": "Expression"
+												},
+												"Filepath": {
+													"value": "@pipeline().parameters.Source_Path",
+													"type": "Expression"
+												},
+												"Compression_Type": {
+													"value": "@pipeline().parameters.Compression_Type",
+													"type": "Expression"
+												},
+												"Column_Delimiter": {
+													"value": "@pipeline().parameters.Column_Delimiter",
+													"type": "Expression"
+												},
+												"Encoding": {
+													"value": "@pipeline().parameters.Encoding",
+													"type": "Expression"
+												},
+												"Row_Delimiter": {
+													"value": "@pipeline().parameters.Row_Delimiter",
+													"type": "Expression"
+												},
+												"Escape_Character": {
+													"value": "@pipeline().parameters.Escape_Character",
+													"type": "Expression"
+												},
+												"Quote_Character": {
+													"value": "@pipeline().parameters.Quote_Character",
+													"type": "Expression"
+												},
+												"First_Row_Header": {
+													"value": "@pipeline().parameters.First_Row_Header",
+													"type": "Expression"
+												}
+											}
+										},
+										"enableLogging": false,
+										"storeSettings": {
+											"type": "SftpReadSettings",
+											"recursive": false,
+											"enablePartitionDiscovery": false,
+											"disableChunking": false
+										}
+									}
+								},
+								{
+									"name": "Create Folder Input - Data Lake",
+									"type": "DatabricksNotebook",
+									"dependsOn": [
+										{
+											"activity": "Check_Archive_Name",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"notebookPath": "/root/private/nb-create-folder",
+										"baseParameters": {
+											"client_name": {
+												"value": "@pipeline().parameters.Client_Name",
+												"type": "Expression"
+											},
+											"communication_channel": {
+												"value": "@pipeline().parameters.Communication_Channel",
+												"type": "Expression"
+											},
+											"process_name": {
+												"value": "@pipeline().parameters.File_Name",
+												"type": "Expression"
+											},
+											"process_type": {
+												"value": "@substring(pipeline().parameters.File_Extension,1,3)",
+												"type": "Expression"
+											}
+										}
+									},
+									"linkedServiceName": {
+										"referenceName": "ls_loyaltyengine_db_hml",
+										"type": "LinkedServiceReference"
+									}
+								},
+								{
+									"name": "Move to Processed",
+									"description": "Insere o arquivo na pasta de arquivos processados do cliente",
+									"type": "Copy",
+									"dependsOn": [
+										{
+											"activity": "Move to Sucess",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "DelimitedTextSource",
+											"storeSettings": {
+												"type": "AzureBlobStorageReadSettings",
+												"recursive": true,
+												"enablePartitionDiscovery": false
+											},
+											"formatSettings": {
+												"type": "DelimitedTextReadSettings"
+											}
+										},
+										"sink": {
+											"type": "DelimitedTextSink",
+											"storeSettings": {
+												"type": "AzureBlobStorageWriteSettings"
+											},
+											"formatSettings": {
+												"type": "DelimitedTextWriteSettings",
+												"quoteAllText": true,
+												"fileExtension": ".txt"
+											}
+										},
+										"enableStaging": false,
+										"translator": {
+											"type": "TabularTranslator",
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_sink_loyaltyengine_csv_dev",
+											"type": "DatasetReference",
+											"parameters": {
+												"FileName": {
+													"value": "@item().name",
+													"type": "Expression"
+												},
+												"DestinationRoot": {
+													"value": "@pipeline().parameters.Destination_Root",
+													"type": "Expression"
+												},
+												"DestinationPath": {
+													"value": "@variables('Destination_Path')",
+													"type": "Expression"
+												},
+												"Compression_Type": {
+													"value": "@pipeline().parameters.Compression_Type",
+													"type": "Expression"
+												},
+												"Column_Delimiter": {
+													"value": "@pipeline().parameters.Column_Delimiter",
+													"type": "Expression"
+												},
+												"Encoding": {
+													"value": "@pipeline().parameters.Encoding",
+													"type": "Expression"
+												},
+												"Row_Delimiter": {
+													"value": "@pipeline().parameters.Row_Delimiter",
+													"type": "Expression"
+												},
+												"Escape_Character": {
+													"value": "@pipeline().parameters.Escape_Character",
+													"type": "Expression"
+												},
+												"Quote_Character": {
+													"value": "@pipeline().parameters.Quote_Character",
+													"type": "Expression"
+												},
+												"First_Row_Header": {
+													"value": "@pipeline().parameters.First_Row_Header",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_sink_loyaltyengine_csv_dev",
+											"type": "DatasetReference",
+											"parameters": {
+												"FileName": {
+													"value": "@item().name",
+													"type": "Expression"
+												},
+												"DestinationRoot": {
+													"value": "@pipeline().parameters.Destination_Root",
+													"type": "Expression"
+												},
+												"DestinationPath": {
+													"value": "@variables('File_Verification_Path')",
+													"type": "Expression"
+												},
+												"Compression_Type": {
+													"value": "@pipeline().parameters.Compression_Type",
+													"type": "Expression"
+												},
+												"Column_Delimiter": {
+													"value": "@pipeline().parameters.Column_Delimiter",
+													"type": "Expression"
+												},
+												"Encoding": {
+													"value": "@pipeline().parameters.Encoding",
+													"type": "Expression"
+												},
+												"Row_Delimiter": {
+													"value": "@pipeline().parameters.Row_Delimiter",
+													"type": "Expression"
+												},
+												"Escape_Character": {
+													"value": "@pipeline().parameters.Escape_Character",
+													"type": "Expression"
+												},
+												"Quote_Character": {
+													"value": "@pipeline().parameters.Quote_Character",
+													"type": "Expression"
+												},
+												"First_Row_Header": {
+													"value": "@pipeline().parameters.First_Row_Header",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								}
+							]
+						}
+					},
+					{
+						"name": "Main Error ADF - Loop",
+						"type": "DatabricksNotebook",
+						"dependsOn": [
+							{
+								"activity": "Loop",
+								"dependencyConditions": [
+									"Failed"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"notebookPath": "/root/functions/notification/error/nb-error-adf",
+							"baseParameters": {
+								"pipeline_name": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								},
+								"run_id": {
+									"value": "@pipeline().RunId",
+									"type": "Expression"
+								}
+							}
+						},
+						"linkedServiceName": {
+							"referenceName": "ls_loyaltyengine_db_hml",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "Main Error ADF - Verify Empty Folder",
+						"type": "DatabricksNotebook",
+						"dependsOn": [
+							{
+								"activity": "Verify Empty Folder",
+								"dependencyConditions": [
+									"Failed"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"notebookPath": "/root/functions/notification/error/nb-error-adf",
+							"baseParameters": {
+								"pipeline_name": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								},
+								"run_id": {
+									"value": "@pipeline().RunId",
+									"type": "Expression"
+								}
+							}
+						},
+						"linkedServiceName": {
+							"referenceName": "ls_loyaltyengine_db_hml",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "Set Destination_Lake",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "Set Destination_Path",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "Destination_Lake",
+							"value": {
+								"value": "@concat('/dbfs/mnt/',pipeline().parameters.Destination_Root,'/',variables('Destination_Path'), '/')",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "Set Destination_Path",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "Set File_Verification_Path",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "Destination_Path",
+							"value": {
+								"value": "@concat(pipeline().parameters.Client_Name, '/', pipeline().parameters.Communication_Channel, '/', substring(pipeline().parameters.File_Extension,1,3), '/', pipeline().parameters.File_Name, '/input')",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "Set File_Verification_Path",
+						"type": "SetVariable",
+						"dependsOn": [],
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "File_Verification_Path",
+							"value": {
+								"value": "@concat(pipeline().parameters.Client_Name, '/processed')",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"parameters": {
+					"Source_Path": {
+						"type": "string",
+						"defaultValue": "/Teste_Dev/processar"
+					},
+					"File_Name": {
+						"type": "string",
+						"defaultValue": "product"
+					},
+					"Error_Source_Path": {
+						"type": "string",
+						"defaultValue": "/Teste_Dev/erro"
+					},
+					"Destination_Root": {
+						"type": "string",
+						"defaultValue": "raw"
+					},
+					"File_Extension": {
+						"type": "string",
+						"defaultValue": ".csv"
+					},
+					"Layout_ID": {
+						"type": "string",
+						"defaultValue": "720d7dd9-3a99-46e1-9a6c-99251b187704"
+					},
+					"Sucess_Source_Path": {
+						"type": "string",
+						"defaultValue": "/Teste_Dev/processado"
+					},
+					"Compression_Type": {
+						"type": "string",
+						"defaultValue": "None"
+					},
+					"Column_Delimiter": {
+						"type": "string",
+						"defaultValue": "|"
+					},
+					"Row_Delimiter": {
+						"type": "string",
+						"defaultValue": "\\r\\n"
+					},
+					"Encoding": {
+						"type": "string",
+						"defaultValue": "utf-8"
+					},
+					"Escape_Character": {
+						"type": "string",
+						"defaultValue": "\\"
+					},
+					"Quote_Character": {
+						"type": "string",
+						"defaultValue": "\""
+					},
+					"First_Row_Header": {
+						"type": "bool",
+						"defaultValue": true
+					},
+					"Client_Name": {
+						"type": "string",
+						"defaultValue": "25752111000185"
+					},
+					"Communication_Channel": {
+						"type": "string",
+						"defaultValue": "sftp"
+					}
+				},
+				"variables": {
+					"Verify_Child_Items": {
+						"type": "String"
+					},
+					"Destination_Lake": {
+						"type": "String"
+					},
+					"Destination_Path": {
+						"type": "String"
+					},
+					"File_Verification_Path": {
+						"type": "String"
+					}
+				},
+				"folder": {
+					"name": "Base_Model"
+				},
+				"annotations": [],
+				"lastPublishTime": "2022-07-22T13:10:07Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/template_ds_source_folder')]",
+				"[concat(variables('factoryId'), '/linkedServices/ls_loyaltyengine_db_hml')]",
+				"[concat(variables('factoryId'), '/pipelines/Error_Pipeline')]",
+				"[concat(variables('factoryId'), '/datasets/template_ds_source_file')]",
+				"[concat(variables('factoryId'), '/datasets/ds_sink_loyaltyengine_csv_dev_get_metadata')]",
+				"[concat(variables('factoryId'), '/datasets/ds_sink_loyaltyengine_csv_dev')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Error_Pipeline')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Pipeline Error",
+						"type": "Fail",
+						"dependsOn": [],
+						"userProperties": [],
+						"typeProperties": {
+							"message": {
+								"value": "@pipeline().parameters.Error_Message",
+								"type": "Expression"
+							},
+							"errorCode": {
+								"value": "@pipeline().parameters.Error_Code",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"parameters": {
+					"Error_Code": {
+						"type": "string"
+					},
+					"Error_Message": {
+						"type": "string"
+					}
+				},
+				"folder": {
+					"name": "Base_Model"
+				},
+				"annotations": [],
+				"lastPublishTime": "2021-12-28T15:46:01Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_sink_loyaltyengine_csv_dev')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_loyaltyengine_bl_hml",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"FileName": {
+						"type": "string"
+					},
+					"DestinationRoot": {
+						"type": "string"
+					},
+					"DestinationPath": {
+						"type": "string"
+					},
+					"Compression_Type": {
+						"type": "string"
+					},
+					"Column_Delimiter": {
+						"type": "string"
+					},
+					"Encoding": {
+						"type": "string"
+					},
+					"Row_Delimiter": {
+						"type": "string"
+					},
+					"Escape_Character": {
+						"type": "string"
+					},
+					"Quote_Character": {
+						"type": "string"
+					},
+					"First_Row_Header": {
+						"type": "bool"
+					}
+				},
+				"folder": {
+					"name": "FTP"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobStorageLocation",
+						"fileName": {
+							"value": "@dataset().FileName",
+							"type": "Expression"
+						},
+						"folderPath": {
+							"value": "@dataset().DestinationPath",
+							"type": "Expression"
+						},
+						"container": {
+							"value": "@dataset().DestinationRoot",
+							"type": "Expression"
+						}
+					},
+					"columnDelimiter": {
+						"value": "@dataset().Column_Delimiter",
+						"type": "Expression"
+					},
+					"rowDelimiter": {
+						"value": "@dataset().Row_Delimiter",
+						"type": "Expression"
+					},
+					"compressionCodec": {
+						"value": "@dataset().Compression_Type",
+						"type": "Expression"
+					},
+					"compressionLevel": "Optimal",
+					"encodingName": {
+						"value": "@dataset().Encoding",
+						"type": "Expression"
+					},
+					"escapeChar": {
+						"value": "@dataset().Escape_Character",
+						"type": "Expression"
+					},
+					"firstRowAsHeader": {
+						"value": "@dataset().First_Row_Header",
+						"type": "Expression"
+					},
+					"quoteChar": {
+						"value": "@dataset().Quote_Character",
+						"type": "Expression"
+					}
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_loyaltyengine_bl_hml')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_sink_loyaltyengine_csv_dev_get_metadata')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_loyaltyengine_bl_hml",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"DestinationRoot": {
+						"type": "string"
+					},
+					"DestinationPath": {
+						"type": "string"
+					},
+					"Compression_Type": {
+						"type": "string"
+					},
+					"Column_Delimiter": {
+						"type": "string"
+					},
+					"Encoding": {
+						"type": "string"
+					},
+					"Row_Delimiter": {
+						"type": "string"
+					},
+					"Escape_Character": {
+						"type": "string"
+					},
+					"Quote_Character": {
+						"type": "string"
+					},
+					"First_Row_Header": {
+						"type": "bool"
+					}
+				},
+				"folder": {
+					"name": "FTP"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobStorageLocation",
+						"folderPath": {
+							"value": "@dataset().DestinationPath",
+							"type": "Expression"
+						},
+						"container": {
+							"value": "@dataset().DestinationRoot",
+							"type": "Expression"
+						}
+					},
+					"columnDelimiter": {
+						"value": "@dataset().Column_Delimiter",
+						"type": "Expression"
+					},
+					"rowDelimiter": {
+						"value": "@dataset().Row_Delimiter",
+						"type": "Expression"
+					},
+					"compressionCodec": {
+						"value": "@dataset().Compression_Type",
+						"type": "Expression"
+					},
+					"compressionLevel": "Optimal",
+					"encodingName": {
+						"value": "@dataset().Encoding",
+						"type": "Expression"
+					},
+					"escapeChar": {
+						"value": "@dataset().Escape_Character",
+						"type": "Expression"
+					},
+					"firstRowAsHeader": {
+						"value": "@dataset().First_Row_Header",
+						"type": "Expression"
+					},
+					"quoteChar": {
+						"value": "@dataset().Quote_Character",
+						"type": "Expression"
+					}
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_loyaltyengine_bl_hml')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/template_ds_source_file')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_loyaltyengine_sftp_hml",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"Filename": {
+						"type": "string"
+					},
+					"Filepath": {
+						"type": "string"
+					},
+					"Compression_Type": {
+						"type": "string"
+					},
+					"Column_Delimiter": {
+						"type": "string"
+					},
+					"Encoding": {
+						"type": "string"
+					},
+					"Row_Delimiter": {
+						"type": "string"
+					},
+					"Escape_Character": {
+						"type": "string"
+					},
+					"Quote_Character": {
+						"type": "string"
+					},
+					"First_Row_Header": {
+						"type": "bool"
+					}
+				},
+				"folder": {
+					"name": "FTP"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "SftpLocation",
+						"fileName": {
+							"value": "@dataset().FileName",
+							"type": "Expression"
+						},
+						"folderPath": {
+							"value": "@dataset().FilePath",
+							"type": "Expression"
+						}
+					},
+					"columnDelimiter": {
+						"value": "@dataset().Column_Delimiter",
+						"type": "Expression"
+					},
+					"rowDelimiter": {
+						"value": "@dataset().Row_Delimiter",
+						"type": "Expression"
+					},
+					"compressionCodec": {
+						"value": "@dataset().Compression_Type",
+						"type": "Expression"
+					},
+					"compressionLevel": "Optimal",
+					"encodingName": {
+						"value": "@dataset().Encoding",
+						"type": "Expression"
+					},
+					"escapeChar": {
+						"value": "@dataset().Escape_Character",
+						"type": "Expression"
+					},
+					"firstRowAsHeader": {
+						"value": "@dataset().First_Row_Header",
+						"type": "Expression"
+					},
+					"quoteChar": {
+						"value": "@dataset().Quote_Character",
+						"type": "Expression"
+					}
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_loyaltyengine_sftp_hml')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/template_ds_source_folder')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_loyaltyengine_sftp_hml",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"FilePath": {
+						"type": "string"
+					},
+					"CompressionType": {
+						"type": "string"
+					},
+					"ColumnDelimiter": {
+						"type": "string"
+					},
+					"RowDelimiter": {
+						"type": "string"
+					},
+					"Encoding": {
+						"type": "string"
+					},
+					"EscapeCharacter": {
+						"type": "string"
+					},
+					"QuoteCharacter": {
+						"type": "string"
+					},
+					"FirstRowasHeader": {
+						"type": "bool"
+					}
+				},
+				"folder": {
+					"name": "FTP"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "SftpLocation",
+						"folderPath": {
+							"value": "@dataset().FilePath",
+							"type": "Expression"
+						}
+					},
+					"columnDelimiter": {
+						"value": "@dataset().ColumnDelimiter",
+						"type": "Expression"
+					},
+					"rowDelimiter": {
+						"value": "@dataset().RowDelimiter",
+						"type": "Expression"
+					},
+					"compressionCodec": {
+						"value": "@dataset().CompressionType",
+						"type": "Expression"
+					},
+					"compressionLevel": "Optimal",
+					"encodingName": {
+						"value": "@dataset().Encoding",
+						"type": "Expression"
+					},
+					"escapeChar": {
+						"value": "@dataset().EscapeCharacter",
+						"type": "Expression"
+					},
+					"firstRowAsHeader": {
+						"value": "@dataset().FirstRowasHeader",
+						"type": "Expression"
+					},
+					"quoteChar": {
+						"value": "@dataset().QuoteCharacter",
+						"type": "Expression"
+					}
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_loyaltyengine_sftp_hml')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_loyaltyengine_bl_hml')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Linked service para a conta do blob storage (Data Lake) - HML.",
+				"annotations": [],
+				"type": "AzureBlobStorage",
+				"typeProperties": {
+					"connectionString": "[parameters('ls_loyaltyengine_bl_hml_connectionString')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_loyaltyengine_db_hml')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Linked service para o ambiente do databricks de HML (Cluster cl-loyaltyengine-hml).",
+				"annotations": [],
+				"type": "AzureDatabricks",
+				"typeProperties": {
+					"domain": "https://adb-1201743383509968.8.azuredatabricks.net/",
+					"accessToken": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "ls_loyaltyengine_kv_hml",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "kv-token-databricks-hml"
+					},
+					"existingClusterId": "[parameters('ls_loyaltyengine_db_hml_properties_typeProperties_existingClusterId')]"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_loyaltyengine_kv_hml')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_loyaltyengine_dl_hml')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Linked service para a conta do Storage (Data Lake) - HML.",
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('ls_loyaltyengine_dl_hml_properties_typeProperties_url')]",
+					"accountKey": {
+						"type": "SecureString",
+						"value": "[parameters('ls_loyaltyengine_dl_hml_accountKey')]"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_loyaltyengine_kv_hml')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Linked service para o ambiente do key vault de HML.",
+				"annotations": [],
+				"type": "AzureKeyVault",
+				"typeProperties": {
+					"baseUrl": "[parameters('ls_loyaltyengine_kv_hml_properties_typeProperties_baseUrl')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_loyaltyengine_sftp_hml')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "Sftp",
+				"typeProperties": {
+					"host": "[parameters('ls_loyaltyengine_sftp_hml_properties_typeProperties_host')]",
+					"port": 22,
+					"skipHostKeyValidation": true,
+					"authenticationType": "Basic",
+					"userName": "[parameters('ls_loyaltyengine_sftp_hml_properties_typeProperties_userName')]",
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('ls_loyaltyengine_sftp_hml_password')]"
+					}
+				},
+				"connectVia": {
+					"referenceName": "BRAZULTMGWDFV2",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/BRAZULTMGWDFV2')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/BRAZULTMGWDFV2')]",
+			"type": "Microsoft.DataFactory/factories/integrationRuntimes",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "SelfHosted",
+				"description": "Servidor de HML de Integration RunTiome",
+				"typeProperties": {
+					"linkedInfo": {
+						"resourceId": "[parameters('BRAZULTMGWDFV2_properties_typeProperties_linkedInfo_resourceId')]",
+						"authorizationType": "Rbac"
+					}
+				}
+			},
+			"dependsOn": []
+		}
+	]
+}

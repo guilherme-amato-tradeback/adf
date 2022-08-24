@@ -1,0 +1,105 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "adf-loyaltyengine-orchestrator-hml"
+		},
+		"ls_loyaltyengine_bl_hml_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'ls_loyaltyengine_bl_hml'"
+		},
+		"ls_loyaltyengine_dl_hml_accountKey": {
+			"type": "secureString",
+			"metadata": "Secure string for 'accountKey' of 'ls_loyaltyengine_dl_hml'"
+		},
+		"ls_loyaltyengine_sftp_hml_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'ls_loyaltyengine_sftp_hml'"
+		},
+		"ls_loyaltyengine_db_hml_properties_typeProperties_existingClusterId": {
+			"type": "string",
+			"defaultValue": "0307-161633-87ltspg6"
+		},
+		"ls_loyaltyengine_dl_hml_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://stloyaltyenginedatahml.dfs.core.windows.net/"
+		},
+		"ls_loyaltyengine_kv_hml_properties_typeProperties_baseUrl": {
+			"type": "string",
+			"defaultValue": "https://kv-loyaltyengine-hml-us2.vault.azure.net/"
+		},
+		"ls_loyaltyengine_sftp_hml_properties_typeProperties_host": {
+			"type": "string",
+			"defaultValue": "BRRNHMLPRC01.GRUPOLTM.LOCAL"
+		},
+		"ls_loyaltyengine_sftp_hml_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "sftp.loyaltyengine"
+		},
+		"BRAZULTMGWDFV2_properties_typeProperties_linkedInfo_resourceId": {
+			"type": "string",
+			"defaultValue": "/subscriptions/c2f3374a-1f37-472e-88e1-78a28d68a2fe/resourcegroups/LTMGWDFV2/providers/Microsoft.DataFactory/factories/LtmGWDFV2/integrationruntimes/IntegrationRuntimeBRAZULTMGWDFV2"
+		},
+		"containerUri": {
+			"type": "string",
+			"metadata": "URI to storage account containing linked ARM templates"
+		},
+		"containerSasToken": {
+			"type": "string",
+			"metadata": "Sas token to storage account containing linked ARM templates"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "adf-loyaltyengine-orchestrator-hml_ArmTemplate_0",
+			"type": "Microsoft.Resources/deployments",
+			"apiVersion": "2018-02-01",
+			"properties": {
+				"mode": "incremental",
+				"templateLink": {
+					"uri": "[concat(parameters('containerUri'), '/ArmTemplate_0.json', parameters('containerSasToken'))]",
+					"contentVersion": "1.0.0.0"
+				},
+				"parameters": {
+					"factoryName": {
+						"value": "[parameters('factoryName')]"
+					},
+					"ls_loyaltyengine_bl_hml_connectionString": {
+						"value": "[parameters('ls_loyaltyengine_bl_hml_connectionString')]"
+					},
+					"ls_loyaltyengine_dl_hml_accountKey": {
+						"value": "[parameters('ls_loyaltyengine_dl_hml_accountKey')]"
+					},
+					"ls_loyaltyengine_sftp_hml_password": {
+						"value": "[parameters('ls_loyaltyengine_sftp_hml_password')]"
+					},
+					"ls_loyaltyengine_dl_hml_properties_typeProperties_url": {
+						"value": "[parameters('ls_loyaltyengine_dl_hml_properties_typeProperties_url')]"
+					},
+					"ls_loyaltyengine_kv_hml_properties_typeProperties_baseUrl": {
+						"value": "[parameters('ls_loyaltyengine_kv_hml_properties_typeProperties_baseUrl')]"
+					},
+					"BRAZULTMGWDFV2_properties_typeProperties_linkedInfo_resourceId": {
+						"value": "[parameters('BRAZULTMGWDFV2_properties_typeProperties_linkedInfo_resourceId')]"
+					},
+					"ls_loyaltyengine_db_hml_properties_typeProperties_existingClusterId": {
+						"value": "[parameters('ls_loyaltyengine_db_hml_properties_typeProperties_existingClusterId')]"
+					},
+					"ls_loyaltyengine_sftp_hml_properties_typeProperties_host": {
+						"value": "[parameters('ls_loyaltyengine_sftp_hml_properties_typeProperties_host')]"
+					},
+					"ls_loyaltyengine_sftp_hml_properties_typeProperties_userName": {
+						"value": "[parameters('ls_loyaltyengine_sftp_hml_properties_typeProperties_userName')]"
+					}
+				}
+			},
+			"dependsOn": []
+		}
+	]
+}
