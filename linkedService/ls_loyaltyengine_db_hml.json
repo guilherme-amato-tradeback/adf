@@ -1,6 +1,5 @@
 {
 	"name": "ls_loyaltyengine_db_hml",
-	"type": "Microsoft.DataFactory/factories/linkedservices",
 	"properties": {
 		"description": "Linked service para o ambiente do databricks de HML (Cluster cl-loyaltyengine-hml).",
 		"annotations": [],
@@ -15,7 +14,8 @@
 				},
 				"secretName": "kv-token-databricks-hml"
 			},
-			"existingClusterId": "0307-161633-87ltspg6"
+			"existingClusterId": "0822-135853-c9mb8yoy"
 		}
-	}
+	},
+	"type": "Microsoft.DataFactory/factories/linkedservices"
 }
