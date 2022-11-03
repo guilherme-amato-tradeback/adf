@@ -1938,7 +1938,7 @@
 				"typeProperties": {
 					"variableName": "File_Verification_Path",
 					"value": {
-						"value": "@concat(pipeline().parameters.Client_Name, '/processed')",
+						"value": "@concat(pipeline().parameters.Client_Name, '/processed_files')",
 						"type": "Expression"
 					}
 				}
@@ -1947,7 +1947,7 @@
 		"parameters": {
 			"Source_Path": {
 				"type": "string",
-				"defaultValue": "/Teste_Dev/processar"
+				"defaultValue": "/BASF/Product"
 			},
 			"File_Name": {
 				"type": "string",
@@ -1955,7 +1955,7 @@
 			},
 			"Error_Source_Path": {
 				"type": "string",
-				"defaultValue": "/Teste_Dev/erro"
+				"defaultValue": "/BASF/erro"
 			},
 			"Destination_Root": {
 				"type": "string",
@@ -1971,7 +1971,7 @@
 			},
 			"Sucess_Source_Path": {
 				"type": "string",
-				"defaultValue": "/Teste_Dev/processado"
+				"defaultValue": "/BASF/processado"
 			},
 			"Compression_Type": {
 				"type": "string",
@@ -2003,7 +2003,7 @@
 			},
 			"Client_Name": {
 				"type": "string",
-				"defaultValue": "25752111000185"
+				"defaultValue": "33764ce33d5347fab732c16c70668595"
 			},
 			"Communication_Channel": {
 				"type": "string",
