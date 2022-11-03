@@ -1,5 +1,5 @@
 {
-	"name": "Copy Files From SFTP_copy1",
+	"name": "Copy Files From SFTP",
 	"properties": {
 		"activities": [
 			{
