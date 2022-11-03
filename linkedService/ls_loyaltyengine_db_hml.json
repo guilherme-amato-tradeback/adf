@@ -12,9 +12,10 @@
 					"referenceName": "ls_loyaltyengine_kv_hml",
 					"type": "LinkedServiceReference"
 				},
-				"secretName": "kv-token-databricks-hml"
+				"secretName": "kv-token-databricks-hml",
+				"secretVersion": "5912b2fe44d141618e0a23a2edc0634e"
 			},
-			"existingClusterId": "0822-135853-c9mb8yoy"
+			"existingClusterId": "1103-143118-z41fyvvx"
 		}
 	},
 	"type": "Microsoft.DataFactory/factories/linkedservices"
